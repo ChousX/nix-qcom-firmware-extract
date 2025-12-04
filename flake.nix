@@ -39,7 +39,6 @@
         name = "qcom-firmware-extract";
         runtimeInputs = with pkgs; [
           dislocker
-          ntfs3g
           util-linux
           coreutils
           findutils
@@ -90,7 +89,7 @@
           }
           trap cleanup EXIT
 
-          if [ -z "$SEARCH_PATH" ]; then
+                      if [ -z "$SEARCH_PATH" ]; then
             # Find partition
             part=$(lsblk -l -o NAME,FSTYPE | grep nvme0n1 | grep BitLocker | cut -d" " -f1 || true)
             nobitlocker=0
@@ -108,9 +107,11 @@
             echo "Mounting Windows partition $part..."
             if [ "$nobitlocker" -eq 0 ]; then
               dislocker --readonly "/dev/$part" -- "$tmpdir/dislocker"
-              mount -t ntfs-3g -o loop,ro "$tmpdir/dislocker/dislocker-file" "$tmpdir/mnt"
+              # Use kernel ntfs3 driver (faster than FUSE ntfs-3g)
+              mount -t ntfs3 -o loop,ro "$tmpdir/dislocker/dislocker-file" "$tmpdir/mnt"
             else
-              mount -t ntfs-3g -o ro "/dev/$part" "$tmpdir/mnt"
+              # Use kernel ntfs3 driver
+              mount -t ntfs3 -o ro "/dev/$part" "$tmpdir/mnt"
             fi
             SEARCH_PATH="$tmpdir/mnt/$WIN_FW_PATH"
           fi
